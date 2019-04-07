@@ -15,24 +15,29 @@
 数据保存在Mysql中。
 
 """
+import random
 
 import requests
 import json
-from crawler.tradition2simple import traditional2simple
+from tradition2simple import traditional2simple
 import re
 import pymysql
 import time
+from fake_useragent import UserAgent
 
-api_key = 'your_api_key'
+api_key = '8c99df146304ee05dbdfb358fdf1b82e'
 person_detail_url = 'https://api.themoviedb.org/3/person/{person_id}?api_key={api_key}&language=zh-cn'
 movie_cast_url = 'https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={api_key}'
 person_movie_detail_url = 'https://api.themoviedb.org/3/person/{person_id}/movie_credits?api_key={api_key}&language=zh-cn'
 all_movie_genres_url = 'https://api.themoviedb.org/3/genre/movie/list?api_key={api_key}&language=zh-cn'
 
+ua = UserAgent()
+headers = {'User-Agent': ua.random}
+
 chinese_pattern = re.compile(u"[\u4e00-\u9fa5]+")   # 用于查找汉字，选取演员的中文名
 
 # TODO 连接本地mysql的CBDB数据库
-mysql_db = pymysql.connect(host="localhost", user="root", db="kg_demo_movie", use_unicode=True, charset="utf8mb4")
+mysql_db = pymysql.connect(host="localhost", user="root", passwd="508508admin", db="kg_demo_movie", use_unicode=True, charset="utf8mb4")
 mysql_cursor = mysql_db.cursor()
 
 # TODO 插入语句模板
@@ -67,7 +72,7 @@ def get_movie_cast(movie_id):
     :return:
     """
     cast_list = list()
-    r = requests.get(movie_cast_url.format(movie_id=movie_id, api_key=api_key))
+    r = requests.get(movie_cast_url.format(movie_id=movie_id, api_key=api_key), headers = headers)
     json_result = json.loads(r.content)
     movie_cast = json_result['cast']
 
@@ -84,7 +89,7 @@ def get_person_detail(person_id):
     :return:
     """
     detail_list = list()
-    r = requests.get(person_detail_url.format(person_id=person_id, api_key=api_key))
+    r = requests.get(person_detail_url.format(person_id=person_id, api_key=api_key), headers = headers)
     json_result = json.loads(r.content)
 
     try:
@@ -136,7 +141,7 @@ def get_person_movie_credits(person_id):
     movie_detail_list = list()
     movie_genre_list = list()
 
-    r = requests.get(person_movie_detail_url.format(person_id=person_id, api_key=api_key))
+    r = requests.get(person_movie_detail_url.format(person_id=person_id, api_key=api_key), headers = headers)
     json_result = json.loads(r.content)
 
     person_movies = json_result['cast']
@@ -224,6 +229,7 @@ if __name__ == '__main__':
         for cast_id in get_movie_cast(m_id):
             person_id_queue.add(cast_id)
     print '获取成功......\n'
+    time.sleep(random.random()*2)
 
     # TODO 获取这些演员的基本信息，存入person表中，并获取每个演员出演的所有电影基本信息
 
@@ -243,6 +249,7 @@ if __name__ == '__main__':
             crawled_person_id_set.add(p_id)
 
     print '获取成功......\n'
+    time.sleep(random.random() * 2)
 
     mysql_cursor.executemany(insert_person_command, person_detail_list)
     mysql_cursor.executemany(insert_person_movie_command, set(person_movie_pair_list))
